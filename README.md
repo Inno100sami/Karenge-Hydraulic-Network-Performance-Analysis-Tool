@@ -11,7 +11,7 @@
 
 This repository hosts an interactive **HTML dashboard** summarising the EPANET hydraulic model of the **Karenge Water Supply Network** operated by the **Water and Sanitation Corporation (WASAC) – Rwamagana Branch**, Rwanda.
 
-The model was developed under the **SCALE Project** (Scaling Climate-Adaptive WASH) and exported from **MIKE URBAN+** into EPANET format. The dashboard presents key network statistics, pressure zone analysis, pump performance, storage tank inventory, demand patterns, and elevation data in a single, self-contained web page — no server or database required.
+The model was developed under the **SCALE Project** (Scaling Climate-Adaptive WASH) and built using **GIS** for network mapping and **EPANET** for hydraulic modelling. The dashboard presents key network statistics, pressure zone analysis, pump performance, storage tank inventory, demand patterns, and elevation data in a single, self-contained web page — no server or database required.
 
 ---
 
@@ -161,7 +161,7 @@ All hydraulic data is derived from the **EPANET model file** `2020-Rwamagana-Kar
 |---|---|
 | Network Owner & Operator | WASAC – Rwamagana Branch, Rwanda |
 | Project Framework | SCALE Project |
-| Model Software | MIKE URBAN+ → EPANET |
+| Model Software | GIS + EPANET |
 | Dashboard Development | April 2026 |
 
 ---
