@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karenge Hydraulic Network Performance Analysis Tool</title>
+  <style>
+    :root {
+      --bg1: #eaf2ff;
+      --bg2: #f6fbff;
+      --ink: #13233d;
+      --muted: #4b607f;
+      --line: #d5e1f2;
+      --card: #ffffff;
+      --primary: #1a4da0;
+      --primary-dark: #0f346f;
+      --teal: #1fa99a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 20% -10%, #d7e8ff 0%, transparent 60%),
+        radial-gradient(900px 500px at 100% 0%, #d7f5f1 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg2), var(--bg1));
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .shell {
+      width: min(980px, 100%);
+      background: color-mix(in oklab, var(--card), #ffffff 20%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 18px 40px rgba(14, 36, 72, 0.12);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 26px 24px 18px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(26, 77, 160, 0.08), rgba(31, 169, 154, 0.08));
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.7vw, 2rem);
+      line-height: 1.2;
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 0.96rem;
+      max-width: 75ch;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--primary-dark);
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-weight: 700;
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), var(--teal));
+      border-radius: 10px;
+      padding: 10px 14px;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      box-shadow: 0 8px 18px rgba(26, 77, 160, 0.2);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(26, 77, 160, 0.28);
+    }
+
+    .foot {
+      border-top: 1px solid var(--line);
+      padding: 12px 20px 16px;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <h1>Karenge Hydraulic Network Performance Analysis Tool</h1>
+      <p>
+        Public entry page for GitHub Pages. Use the links below to open the interactive hydraulic dashboard and
+        the pressure zone map for the Karenge Water Supply Network.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Main Performance Dashboard</h2>
+        <p>
+          Explore KPIs, pressure bands, pump stations, storage tanks, demand profiles, and network summaries in a
+          single interactive view.
+        </p>
+        <a class="btn" href="./karenge-dashboard.html">Open Dashboard</a>
+      </article>
+
+      <article class="card">
+        <h2>Pressure Zone Satellite Map</h2>
+        <p>
+          Review geospatial pressure classes, tank overlays, and pipe group visibility controls on the live map.
+        </p>
+        <a class="btn" href="./karenge-pressure-map.html">Open Pressure Map</a>
+      </article>
+    </section>
+
+    <footer class="foot">
+      GitHub Pages entry file: index.html
+    </footer>
+  </main>
+</body>
+</html>
