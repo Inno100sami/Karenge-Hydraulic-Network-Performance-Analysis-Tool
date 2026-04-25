@@ -1,6 +1,10 @@
 # 💧 Karenge Water Supply Network – Hydraulic Model Dashboard
 
-[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-View%20Online-1a4da0?style=for-the-badge&logo=html5)](https://inno100sami.github.io/Karenge-Hydraulic-Network-Performance-Analysis-Tool/)
+[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-View%20Online-1a4da0?style=for-the-badge&logo=html5)](https://inno100sami.github.io/Karenge-Hydraulic-Network-Performance-Analysis-Tool/karenge-dashboard.html)
+[![Model](https://img.shields.io/badge/Model-EPANET%20%2F%20MIKE%20URBAN%2B-27ae60?style=for-the-badge)](https://www.mikepoweredbydhi.com/)
+[![Project](https://img.shields.io/badge/Project-SCALE%20Rwanda-f39c12?style=for-the-badge)]()
+[![Authority](https://img.shields.io/badge/Authority-WASAC%20Rwamagana-e74c3c?style=for-the-badge)]()
+
 ---
 
 ## 📖 About This Project
@@ -88,15 +92,19 @@ Full reference table of model configuration: software source, flow units, H-W ro
 ## 🚀 Viewing the Dashboard
 
 ### Option 1 — GitHub Pages (recommended)
-If GitHub Pages is enabled for this repository, the dashboard is live at:
+If GitHub Pages is enabled for this repository, the site is live at:
 
 ```
-https://<your-username>.github.io/<repo-name>/karenge-dashboard.html
+https://<your-username>.github.io/<repo-name>/
 ```
+
+The root URL serves `index.html`, which links to:
+- `karenge-dashboard.html`
+- `karenge-pressure-map.html`
 
 ### Option 2 — Download and open locally
 1. Clone or download this repository
-2. Open `karenge-dashboard.html` in any modern browser (Chrome, Firefox, Edge, Safari)
+2. Open `index.html` (or `karenge-dashboard.html`) in any modern browser (Chrome, Firefox, Edge, Safari)
 3. No installation, server, or internet connection required after download
 
 ### Option 3 — View raw file
@@ -109,8 +117,10 @@ Click **`karenge-dashboard.html`** in the file list above, then click **"Raw"** 
 ```
 .
 ├── README.md                    ← This file
-├── karenge-dashboard.html       ← Main interactive dashboard (self-contained)
-└── .gitattributes               ← Git line-ending normalisation
+├── index.html                   ← GitHub Pages entry page
+├── karenge-dashboard.html       ← Main interactive dashboard
+├── karenge-pressure-map.html    ← Pressure zone satellite map
+└── pipe_data.js                 ← Pipe geometry data for map/dashboard
 ```
 
 ---
