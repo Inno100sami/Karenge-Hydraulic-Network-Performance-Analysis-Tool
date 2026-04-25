@@ -1,9 +1,4 @@
 # 💧 Karenge Water Supply Network – Hydraulic Model Dashboard
-
-[![Live Dashboard](https://img.shields.io/badge/Live%20Dashboard-View%20Online-1a4da0?style=for-the-badge&logo=html5)](./karenge-dashboard.html)
-[![Model](https://img.shields.io/badge/Model-EPANET%20%2F%20MIKE%20URBAN%2B-27ae60?style=for-the-badge)]
-[![Authority](https://img.shields.io/badge/WASAC%20Rwamagana-e74c3c?style=for-the-badge)]()
-
 ---
 
 ## 📖 About This Project
