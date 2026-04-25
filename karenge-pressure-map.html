@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Karenge Pressure Zones – Satellite Map | WASAC Rwamagana</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="pipe_data.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap');
+
+  :root {
+    --pz1-c: #38bdf8;   /* 0–5 bar   – sky blue    */
+    --pz2-c: #4ade80;   /* 6–15 bar  – green       */
+    --pz3-c: #fbbf24;   /* 16–20 bar – amber       */
+    --pz4-c: #f87171;   /* 21–25 bar – red         */
+    --pz5-c: #c084fc;   /* >25 bar   – purple      */
+    --panel: rgba(10,15,30,0.88);
+    --border: rgba(255,255,255,0.12);
+    --text: #e8eef8;
+    --muted: #8a9ab8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: #0a0f1e; color: var(--text); }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    background: rgba(8,12,28,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; height: 54px;
+  }
+  #topbar .brand { display: flex; align-items: center; gap: 10px; }
+  #topbar .brand .icon { font-size: 22px; }
+  #topbar .brand h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+  #topbar .brand p  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  #topbar .meta { display: flex; gap: 20px; align-items: center; font-size: 11.5px; color: var(--muted); }
+  #topbar .meta strong { color: var(--text); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+
+  /* ── MAP ── */
+  #map { position: fixed; top: 54px; bottom: 0; left: 0; right: 340px; }
+
+  /* ── RIGHT PANEL ── */
+  #panel {
+    position: fixed; top: 54px; bottom: 0; right: 0; width: 340px;
+    background: var(--panel);
+    backdrop-filter: blur(16px);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+  }
+  #panel::-webkit-scrollbar { width: 4px; }
+  #panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+
+  .panel-section { padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .panel-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 12px; }
+
+  /* Overall avg */
+  .overall-avg {
+    background: linear-gradient(135deg, #1e3a6e, #0d2b5e);
+    border-radius: 10px; padding: 14px 16px;
+    border: 1px solid rgba(58,128,210,0.4);
+  }
+  .overall-avg .oa-lbl { font-size: 10px; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.6px; }
+  .overall-avg .oa-val { font-size: 36px; font-weight: 800; color: #fff; line-height: 1; margin: 4px 0 2px; font-family: 'DM Mono', monospace; }
+  .overall-avg .oa-sub { font-size: 11px; color: #93c5fd; }
+
+  /* Zone cards */
+  .pz-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 8px; margin-bottom: 6px;
+    border: 1px solid transparent; cursor: pointer;
+    transition: background 0.18s, border-color 0.18s;
+  }
+  .pz-item:hover { background: rgba(255,255,255,0.06); }
+  .pz-item.active { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.08); }
+  .pz-swatch { width: 14px; height: 34px; border-radius: 4px; flex-shrink: 0; }
+  .pz-info { flex: 1; }
+  .pz-range { font-size: 11.5px; font-weight: 700; color: var(--text); }
+  .pz-name  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .pz-nums  { text-align: right; }
+  .pz-avg   { font-size: 14px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .pz-nodes { font-size: 10px; color: var(--muted); }
+
+  /* Tank list */
+  .tank-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: 7px; cursor: pointer;
+    font-size: 11.5px; transition: background 0.15s;
+  }
+  .tank-item:hover { background: rgba(255,255,255,0.07); }
+  .tank-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .tank-id  { font-weight: 700; flex: 1; }
+  .tank-zone { font-size: 10px; color: var(--muted); }
+  .tank-pval { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; }
+
+  /* Filter pills */
+  .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .fpill {
+    padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    border: 1px solid transparent; cursor: pointer; transition: all 0.15s;
+    background: rgba(255,255,255,0.06); color: var(--muted);
+  }
+  .fpill:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+  .fpill.active { color: #0a0f1e; border-color: transparent; }
+
+  /* Map controls override */
+  .leaflet-control-attribution { display: none !important; }
+  .leaflet-bar a { background: rgba(10,15,30,0.9) !important; color: #e8eef8 !important; border-color: rgba(255,255,255,0.15) !important; }
+  .leaflet-bar a:hover { background: rgba(30,40,70,0.95) !important; }
+
+  /* Custom marker popup */
+  .leaflet-popup-content-wrapper {
+    background: rgba(8,12,28,0.97) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+    backdrop-filter: blur(16px);
+    font-family: 'DM Sans', sans-serif !important;
+  }
+  .leaflet-popup-tip { background: rgba(8,12,28,0.97) !important; }
+  .leaflet-popup-close-button { color: var(--muted) !important; }
+
+  .popup-header { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .popup-badge {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; margin-bottom: 10px; color: #0a0f1e;
+  }
+  .popup-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .popup-row:last-child { border-bottom: none; }
+  .popup-row .lbl { color: var(--muted); }
+  .popup-row .val { font-weight: 600; font-family: 'DM Mono', monospace; }
+
+  /* Zone boundary tooltip */
+  .zone-tooltip {
+    background: rgba(8,12,28,0.9) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #e8eef8 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 11px; font-weight: 600;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+  }
+
+  @media (max-width: 900px) {
+    #map { right: 0; bottom: 340px; }
+    #panel { top: auto; bottom: 0; right: 0; left: 0; width: 100%; height: 340px; flex-direction: row; overflow-x: auto; overflow-y: hidden; }
+    .panel-section { min-width: 260px; border-bottom: none; border-right: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="brand">
+    <div class="icon">💧</div>
+    <div>
+      <h1>Karenge Water Supply — Pressure Zone Map</h1>
+      <p>WASAC Rwamagana Branch &nbsp;·&nbsp; SCALE Project &nbsp;·&nbsp; EPANET Rev 1 &nbsp;·&nbsp; Rwanda</p>
+    </div>
+  </div>
+  <div class="meta">
+    <span><span class="live-dot"></span><strong>32 Tanks</strong> &nbsp;|&nbsp; 14 Zones</span>
+    <span>📍 UTM 36S &nbsp;·&nbsp; Rwamagana District</span>
+    <span>🗺️ Google Satellite Hybrid</span>
+  </div>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- RIGHT PANEL -->
+<div id="panel">
+
+  <div class="panel-section">
+    <div class="panel-title">Overall Network Average</div>
+    <div class="overall-avg">
+      <div class="oa-lbl">Weighted Average Pressure</div>
+      <div class="oa-val">14.8 <span style="font-size:16px;font-weight:500;color:#93c5fd;">bar</span></div>
+      <div class="oa-sub">Across 32 tanks · Normal operating range</div>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-title">Filter by Pressure Zone</div>
+    <div class="filter-pills" id="filterPills">
+      <div class="fpill active" data-pz="all" style="" onclick="filterZone('all',this)">All</div>
+      <div class="fpill" data-pz="pz1" onclick="filterZone('pz1',this)">0–5 bar</div>
+      <div class="fpill" data-pz="pz2" onclick="filterZone('pz2',this)">6–15 bar</div>
+      <div class="fpill" data-pz="pz3" onclick="filterZone('pz3',this)">16–20 bar</div>
+      <div class="fpill" data-pz="pz4" onclick="filterZone('pz4',this)">21–25 bar</div>
+      <div class="fpill" data-pz="pz5" onclick="filterZone('pz5',this)">&gt;25 bar</div>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-title">Pressure Zone Summary</div>
+    <div id="pzSummary"></div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-title">Tank Index <span id="tankCount" style="color:var(--muted);font-weight:400;">(32)</span></div>
+    <div id="tankList"></div>
+
+    <div class="panel-section">
+      <div class="panel-title">Pipe Network Layers</div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding-top:2px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--text);">
+          <input type="checkbox" id="pl-trans" checked onchange="togglePipeGroup('transmission',this.checked,map)" style="accent-color:#ff6b35;width:13px;height:13px;">
+          <span style="width:22px;height:4px;background:#ff6b35;border-radius:2px;flex-shrink:0;"></span>
+          Transmission ≥200mm <span style="color:var(--muted);margin-left:auto;">297</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--text);">
+          <input type="checkbox" id="pl-prim" checked onchange="togglePipeGroup('primary',this.checked,map)" style="accent-color:#ffd700;width:13px;height:13px;">
+          <span style="width:22px;height:3px;background:#ffd700;border-radius:2px;flex-shrink:0;"></span>
+          Primary 90–199mm <span style="color:var(--muted);margin-left:auto;">455</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--text);">
+          <input type="checkbox" id="pl-sec" checked onchange="togglePipeGroup('secondary',this.checked,map)" style="accent-color:#4fc3f7;width:13px;height:13px;">
+          <span style="width:22px;height:2px;background:#4fc3f7;border-radius:2px;flex-shrink:0;"></span>
+          Secondary 50–89mm <span style="color:var(--muted);margin-left:auto;">912</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--text);">
+          <input type="checkbox" id="pl-svc" checked onchange="togglePipeGroup('service',this.checked,map)" style="accent-color:#9ca3af;width:13px;height:13px;">
+          <span style="width:22px;height:1px;background:#9ca3af;border-radius:2px;flex-shrink:0;"></span>
+          Service 25–49mm <span style="color:var(--muted);margin-left:auto;">8132</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--text);">
+          <input type="checkbox" id="pl-tank" checked onchange="toggleTankLayer(this.checked,map)" style="accent-color:#10b981;width:13px;height:13px;">
+          <span style="width:10px;height:10px;background:#10b981;border-radius:50%;flex-shrink:0;"></span>
+          Tanks (markers + zones)
+        </label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   TANK DATA – WGS84 lat/lng from UTM Zone 35S
+   EPANET [COORDINATES] → converted via UTM formula.
+   Network centroid ≈ -2.040, 30.298
+   Extent: lat [-2.12, -1.96], lng [30.23, 30.37]
+   ════════════════════════════════════════════ */
+const tanks = [
+  { id:'GAHKIBRE1', zone:'GAHKIB', elev:1735.57, diam:25,  init:2.3, min:0.2, max:2.5, pressure:28.4, lat:-1.976183, lng:30.315796 },
+  { id:'GAHKIBRE2', zone:'GAHKIB', elev:1639.58, diam:50,  init:1.8, min:0.2, max:2.0, pressure:18.7, lat:-1.984207, lng:30.325539 },
+  { id:'GAHKIBRE3', zone:'GAHKIB', elev:1569.52, diam:15,  init:1.3, min:0.2, max:1.5, pressure:12.3, lat:-1.974917, lng:30.302227 },
+  { id:'KARBICRE1', zone:'KARBIC', elev:1517.88, diam:10,  init:1.7, min:0.2, max:2.0, pressure:8.7,  lat:-2.05563,  lng:30.344148 },
+  { id:'KARBICRE3', zone:'KARBIC', elev:1466.07, diam:15,  init:2.0, min:0.2, max:2.5, pressure:3.6,  lat:-2.06375,  lng:30.355409 },
+  { id:'KARBICRE6', zone:'KARBIC', elev:1443.06, diam:12,  init:1.7, min:0.2, max:2.0, pressure:2.1,  lat:-2.073127, lng:30.349189 },
+  { id:'KARKANRE',  zone:'KARKAN', elev:1449.35, diam:12,  init:1.5, min:0.2, max:2.0, pressure:4.2,  lat:-2.089603, lng:30.281374 },
+  { id:'KARKANRE2', zone:'KARKAN', elev:1555.58, diam:12,  init:1.5, min:0.2, max:2.0, pressure:14.6, lat:-2.077604, lng:30.279751 },
+  { id:'KARNYARE1', zone:'KARNYA', elev:1546.23, diam:200, init:1.8, min:0.2, max:2.0, pressure:13.8, lat:-2.078955, lng:30.29343  },
+  { id:'KARNYARE2', zone:'KARNYA', elev:1472.46, diam:12,  init:1.5, min:0.2, max:2.0, pressure:6.5,  lat:-2.073597, lng:30.303364 },
+  { id:'KARNYARE5', zone:'KARNYA', elev:1576.54, diam:10,  init:1.7, min:0.2, max:2.0, pressure:16.9, lat:-2.049625, lng:30.345255 },
+  { id:'KARRUGRE1', zone:'KARRUG', elev:1404.17, diam:200, init:2.6, min:0.4, max:2.8, pressure:22.4, lat:-2.091548, lng:30.303787 },
+  { id:'MUYBUJRE4', zone:'MUYBUJ', elev:1538.84, diam:10,  init:1.3, min:0.2, max:1.5, pressure:13.0, lat:-2.003358, lng:30.26638  },
+  { id:'MUYMURRE2', zone:'MUYMU',  elev:1610.51, diam:12,  init:2.0, min:0.2, max:2.5, pressure:20.1, lat:-2.022898, lng:30.281719 },
+  { id:'MUYMURRE6', zone:'MUYMU',  elev:1660.82, diam:25,  init:2.0, min:0.2, max:2.5, pressure:25.0, lat:-2.006994, lng:30.281691 },
+  { id:'NYABIHRE1', zone:'NYABIH', elev:1656.00, diam:300, init:2.2, min:0.2, max:2.5, pressure:24.6, lat:-2.066808, lng:30.273694 },
+  { id:'NYABIHRE2', zone:'NYABIH', elev:1657.48, diam:200, init:2.2, min:0.2, max:2.5, pressure:24.7, lat:-2.066673, lng:30.27372  },
+  { id:'NYABIHRE4', zone:'NYABIH', elev:1624.22, diam:100, init:2.7, min:0.2, max:3.0, pressure:21.5, lat:-2.069575, lng:30.268439 },
+  { id:'NYABIHRE7', zone:'NYABIH', elev:1586.45, diam:15,  init:2.0, min:0.2, max:2.5, pressure:18.0, lat:-2.049094, lng:30.275789 },
+  { id:'NYAGATRE1', zone:'NYAGAT', elev:1502.09, diam:15,  init:1.5, min:0.2, max:2.0, pressure:7.6,  lat:-2.066147, lng:30.256559 },
+  { id:'NYAGATRE4', zone:'NYAGAT', elev:1422.24, diam:12,  init:1.5, min:0.2, max:2.0, pressure:1.8,  lat:-2.056691, lng:30.232979 },
+  { id:'NYAGATRE5', zone:'NYAGAT', elev:1431.20, diam:12,  init:1.7, min:0.2, max:2.0, pressure:2.6,  lat:-2.053742, lng:30.254043 },
+  { id:'NYARWIRE1', zone:'NYARWI', elev:1430.70, diam:12,  init:1.5, min:0.2, max:2.0, pressure:2.5,  lat:-2.083459, lng:30.25479  },
+  { id:'NYARWIRE2', zone:'NYARWI', elev:1622.55, diam:15,  init:1.7, min:0.2, max:2.5, pressure:21.3, lat:-2.066457, lng:30.260472 },
+  { id:'NZIAKARE2', zone:'NZIAKA', elev:1646.37, diam:100, init:2.5, min:0.3, max:3.0, pressure:23.4, lat:-2.026193, lng:30.336584 },
+  { id:'NZIAKARE5', zone:'NZIAKA', elev:1512.75, diam:10,  init:1.7, min:0.2, max:2.0, pressure:9.2,  lat:-2.039583, lng:30.339191 },
+  { id:'NZIKIGRE1', zone:'NZIKG',  elev:1492.61, diam:10,  init:1.7, min:0.2, max:2.0, pressure:6.9,  lat:-2.034879, lng:30.346118 },
+  { id:'NZIKIGRE2', zone:'NZIKG',  elev:1493.51, diam:10,  init:1.7, min:0.2, max:2.0, pressure:7.0,  lat:-2.028339, lng:30.351881 },
+  { id:'NZIKIGRE4', zone:'NZIKG',  elev:1454.60, diam:10,  init:1.7, min:0.2, max:2.0, pressure:3.2,  lat:-2.039292, lng:30.353329 },
+  { id:'NZIMURRE2', zone:'NZIMUR', elev:1588.61, diam:12,  init:1.6, min:0.2, max:2.0, pressure:18.3, lat:-2.011789, lng:30.309531 },
+  { id:'NZIMURRE6', zone:'NZIMUR', elev:1553.63, diam:12,  init:1.6, min:0.2, max:2.0, pressure:14.9, lat:-2.024192, lng:30.309074 },
+  { id:'NZIRUGRE1', zone:'NZIRUG', elev:1556.04, diam:12,  init:1.7, min:0.2, max:2.0, pressure:15.2, lat:-2.029189, lng:30.315147 },
+];
+
+/* Pressure zone config */
+const PZ = {
+  pz1: { label:'0–5 bar',   name:'Very Low',   color:'#38bdf8', fill:'rgba(56,189,248,0.22)',  border:'rgba(56,189,248,0.8)',  pill:'#0c4a6e', avg:3.2,  nodes:'~1,240' },
+  pz2: { label:'6–15 bar',  name:'Normal',     color:'#4ade80', fill:'rgba(74,222,128,0.20)',  border:'rgba(74,222,128,0.8)',  pill:'#14532d', avg:11.4, nodes:'~5,820' },
+  pz3: { label:'16–20 bar', name:'High',       color:'#fbbf24', fill:'rgba(251,191,36,0.22)',  border:'rgba(251,191,36,0.8)',  pill:'#713f12', avg:17.8, nodes:'~1,950' },
+  pz4: { label:'21–25 bar', name:'Very High',  color:'#f87171', fill:'rgba(248,113,113,0.22)', border:'rgba(248,113,113,0.8)', pill:'#7f1d1d', avg:22.6, nodes:'~620'   },
+  pz5: { label:'>25 bar',   name:'Critical',   color:'#c084fc', fill:'rgba(192,132,252,0.22)', border:'rgba(192,132,252,0.8)', pill:'#3b0764', avg:28.4, nodes:'~122'   },
+};
+
+function getPZ(p) {
+  if (p <= 5)  return 'pz1';
+  if (p <= 15) return 'pz2';
+  if (p <= 20) return 'pz3';
+  if (p <= 25) return 'pz4';
+  return 'pz5';
+}
+
+/* ── INIT MAP ── */
+const map = L.map('map', {
+  center: [-2.0401, 30.2981],
+  zoom: 12,
+  zoomControl: true,
+  attributionControl: false
+});
+
+/* Google Satellite Hybrid tiles */
+L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+  maxZoom: 21,
+  subdomains: ['mt0','mt1','mt2','mt3'],
+  attribution: '© Google'
+}).addTo(map);
+
+/* Scale bar */
+L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
+
+/* ── MARKER / LAYER MANAGEMENT ── */
+let allMarkers = [];
+let allCircles = [];
+let activeFilter = 'all';
+let tankLayerVisible = true;
+
+function createMarkerIcon(pzKey, pressure) {
+  const cfg = PZ[pzKey];
+  const size = pressure > 20 ? 36 : pressure > 10 ? 30 : 24;
+  const html = `
+    <div style="
+      width:${size}px; height:${size}px; border-radius:50%;
+      background:${cfg.color};
+      border: 3px solid rgba(255,255,255,0.9);
+      box-shadow: 0 2px 12px ${cfg.color}88, 0 0 0 4px ${cfg.color}33;
+      display:flex; align-items:center; justify-content:center;
+      font-family:'DM Mono',monospace; font-size:${size<30?8:9}px;
+      font-weight:700; color:#0a0f1e; white-space:nowrap;
+    ">${pressure.toFixed(0)}</div>`;
+  return L.divIcon({ html, className:'', iconSize:[size,size], iconAnchor:[size/2,size/2] });
+}
+
+function buildPopup(t) {
+  const pzKey = getPZ(t.pressure);
+  const cfg = PZ[pzKey];
+  const usable = (Math.PI/4 * t.diam**2 * (t.max - t.min)).toFixed(0);
+  return `
+    <div style="min-width:220px;font-family:'DM Sans',sans-serif;">
+      <div class="popup-header">${t.id}</div>
+      <div><span class="popup-badge" style="background:${cfg.color};">${cfg.label} · ${cfg.name}</span></div>
+      <div class="popup-row"><span class="lbl">Zone</span><span class="val">${t.zone}</span></div>
+      <div class="popup-row"><span class="lbl">Elevation</span><span class="val">${t.elev.toFixed(1)} m ASL</span></div>
+      <div class="popup-row"><span class="lbl">Diameter</span><span class="val">Ø ${t.diam} m</span></div>
+      <div class="popup-row"><span class="lbl">Est. Pressure</span><span class="val" style="color:${cfg.color}">${t.pressure.toFixed(1)} bar</span></div>
+      <div class="popup-row"><span class="lbl">Water Levels</span><span class="val">${t.min}–${t.max} m</span></div>
+      <div class="popup-row"><span class="lbl">Init Level</span><span class="val">${t.init} m</span></div>
+      <div class="popup-row"><span class="lbl">Max Storage</span><span class="val">${Number(usable).toLocaleString()} m³</span></div>
+      <div class="popup-row"><span class="lbl">Mix Model</span><span class="val">MIXED</span></div>
+    </div>`;
+}
+
+/* Draw approximated zone circles (radius ~ service area estimate) */
+function getZoneRadius(zone) {
+  const r = { NYABIH:1800, KARNYA:1200, GAHKIB:1400, NZIAKA:1000, MUYMU:900,
+               KARRUG:600,  KARBIC:900,  KARKAN:700,  NYAGAT:1100, NYARWI:900,
+               NZIKG:800,   NZIMUR:700,  NZIRUG:600,  MUYBUJ:600 };
+  return r[zone] || 800;
+}
+
+/* Group tanks by zone to draw zone polygons */
+const zoneGroups = {};
+tanks.forEach(t => {
+  if (!zoneGroups[t.zone]) zoneGroups[t.zone] = [];
+  zoneGroups[t.zone].push(t);
+});
+
+const zoneCircles = {};
+Object.entries(zoneGroups).forEach(([zone, ts]) => {
+  const avgLat = ts.reduce((s,t)=>s+t.lat,0)/ts.length;
+  const avgLng = ts.reduce((s,t)=>s+t.lng,0)/ts.length;
+  const avgP   = ts.reduce((s,t)=>s+t.pressure,0)/ts.length;
+  const pzKey  = getPZ(avgP);
+  const cfg    = PZ[pzKey];
+  const radius = getZoneRadius(zone);
+
+  const circle = L.circle([avgLat, avgLng], {
+    radius,
+    color: cfg.border,
+    fillColor: cfg.fill,
+    fillOpacity: 0.55,
+    weight: 2,
+    dashArray: '6 4',
+  }).addTo(map);
+
+  circle.bindTooltip(`<span style="color:${cfg.color};font-weight:700;">${zone}</span><br>${cfg.label} · avg ${avgP.toFixed(1)} bar`, {
+    className: 'zone-tooltip', sticky: true, direction: 'top'
+  });
+
+  circle._pzKey = pzKey;
+  circle._zone  = zone;
+  zoneCircles[zone] = circle;
+  allCircles.push(circle);
+});
+
+/* Draw tank markers */
+tanks.forEach(t => {
+  const pzKey = getPZ(t.pressure);
+  const marker = L.marker([t.lat, t.lng], {
+    icon: createMarkerIcon(pzKey, t.pressure)
+  }).addTo(map);
+
+  marker.bindPopup(buildPopup(t), { maxWidth: 280 });
+  marker._pzKey = pzKey;
+  marker._tank  = t;
+  allMarkers.push(marker);
+});
+
+/* WTP source marker */
+const wtpIcon = L.divIcon({
+  html: `<div style="width:44px;height:44px;border-radius:50%;background:#1e3a6e;border:3px solid #93c5fd;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 0 6px rgba(147,197,253,0.2);">🏭</div>`,
+  className:'', iconSize:[44,44], iconAnchor:[22,22]
+});
+L.marker([-2.091188, 30.303774], { icon: wtpIcon }).addTo(map)
+  .bindPopup(`<div class="popup-header">Karenge WTP – Source Reservoir</div>
+    <div class="popup-row"><span class="lbl">Head</span><span class="val">1,406.8 m ASL</span></div>
+    <div class="popup-row"><span class="lbl">Main Pipe</span><span class="val">Ø 600 mm</span></div>
+    <div class="popup-row"><span class="lbl">Type</span><span class="val">Fixed Head Reservoir</span></div>`, { maxWidth: 240 });
+
+/* ── FILTER FUNCTION ── */
+function filterZone(pz, el) {
+  activeFilter = pz;
+  document.querySelectorAll('.fpill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const cfg = PZ[pz] || null;
+  if (cfg) {
+    el.style.background = cfg.color;
+    el.style.color = '#0a0f1e';
+  } else {
+    el.style.background = '';
+    el.style.color = '';
+  }
+
+  allMarkers.forEach(m => {
+    const show = tankLayerVisible && (pz === 'all' || m._pzKey === pz);
+    if (show) { if (!map.hasLayer(m)) map.addLayer(m); }
+    else { if (map.hasLayer(m)) map.removeLayer(m); }
+  });
+  allCircles.forEach(c => {
+    const show = tankLayerVisible && (pz === 'all' || c._pzKey === pz);
+    if (show) { if (!map.hasLayer(c)) map.addLayer(c); }
+    else { if (map.hasLayer(c)) map.removeLayer(c); }
+  });
+
+  renderTankList(pz);
+}
+
+/* ── SIDEBAR ── */
+function renderPZSummary() {
+  const el = document.getElementById('pzSummary');
+  const counts = { pz1:0, pz2:0, pz3:0, pz4:0, pz5:0 };
+  const sums   = { pz1:0, pz2:0, pz3:0, pz4:0, pz5:0 };
+  tanks.forEach(t => { const k = getPZ(t.pressure); counts[k]++; sums[k]+=t.pressure; });
+  el.innerHTML = Object.entries(PZ).map(([key,cfg])=>{
+    const n = counts[key]; const avg = n ? (sums[key]/n).toFixed(1) : '–';
+    return `<div class="pz-item" onclick="filterZone('${key}',document.querySelector('[data-pz=${key}]'))">
+      <div class="pz-swatch" style="background:${cfg.color};"></div>
+      <div class="pz-info">
+        <div class="pz-range" style="color:${cfg.color}">${cfg.label}</div>
+        <div class="pz-name">${cfg.name} · ${cfg.nodes} nodes</div>
+      </div>
+      <div class="pz-nums">
+        <div class="pz-avg" style="color:${cfg.color}">${avg}<span style="font-size:9px;font-family:'DM Sans';font-weight:500;color:var(--muted);"> bar</span></div>
+        <div class="pz-nodes">${n} tank${n!==1?'s':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTankList(filter) {
+  const el = document.getElementById('tankList');
+  const countEl = document.getElementById('tankCount');
+  const visible = tanks.filter(t => filter === 'all' || getPZ(t.pressure) === filter);
+  countEl.textContent = `(${visible.length})`;
+  el.innerHTML = visible.map(t => {
+    const pzKey = getPZ(t.pressure);
+    const cfg = PZ[pzKey];
+    return `<div class="tank-item" onclick="flyTo(${t.lat},${t.lng})">
+      <div class="tank-dot" style="background:${cfg.color};box-shadow:0 0 6px ${cfg.color}99;"></div>
+      <div>
+        <div class="tank-id">${t.id}</div>
+        <div class="tank-zone">${t.zone} · ${t.elev.toFixed(0)} m ASL</div>
+      </div>
+      <div class="tank-pval" style="color:${cfg.color}">${t.pressure.toFixed(1)}<span style="font-size:9px;color:var(--muted);font-family:'DM Sans';"> bar</span></div>
+    </div>`;
+  }).join('');
+}
+
+function flyTo(lat, lng) {
+  map.flyTo([lat, lng], 15, { animate: true, duration: 1.0 });
+  // open matching popup
+  allMarkers.forEach(m => {
+    if (m._tank && Math.abs(m._tank.lat - lat) < 0.0001) m.openPopup();
+  });
+}
+
+/* ── PIPE LAYERS ─────────────────────────────────────────────────── */
+const PIPE_GROUP_CFG = {
+  transmission: { diams:[600,400,315,300,250,200], color:'#ff6b35', weight:4,   opacity:0.9  },
+  primary:      { diams:[150,140,110,100,90],      color:'#ffd700', weight:2.5, opacity:0.85 },
+  secondary:    { diams:[75,63,50],               color:'#4fc3f7', weight:1.5, opacity:0.75 },
+  service:      { diams:[40,32,25],               color:'#9ca3af', weight:1,   opacity:0.55 },
+};
+const pipeLayerGroups = {};
+const pipeLayerVisible = { transmission:true, primary:true, secondary:true, service:true };
+
+function buildPipeLayers(mapObj) {
+  Object.entries(PIPE_GROUP_CFG).forEach(([gk, gcfg]) => {
+    const grp = L.layerGroup();
+    gcfg.diams.forEach(d => {
+      const key = 'd'+d;
+      if (typeof PIPE_LAYERS !== 'undefined' && PIPE_LAYERS[key]) {
+        PIPE_LAYERS[key].pipes.forEach(pts => {
+          L.polyline(pts, { color:gcfg.color, weight:gcfg.weight, opacity:gcfg.opacity, lineJoin:'round', lineCap:'round', interactive:false }).addTo(grp);
+        });
+      }
+    });
+    pipeLayerGroups[gk] = grp;
+    if (pipeLayerVisible[gk]) grp.addTo(mapObj);
+  });
+}
+
+function togglePipeGroup(gk, checked, mapObj) {
+  pipeLayerVisible[gk] = checked;
+  if (!pipeLayerGroups[gk]) return;
+  if (checked) mapObj.addLayer(pipeLayerGroups[gk]);
+  else mapObj.removeLayer(pipeLayerGroups[gk]);
+}
+
+function toggleTankLayer(checked, mapObj) {
+  tankLayerVisible = checked;
+  const pz = activeFilter;
+  allMarkers.forEach(m => {
+    const show = tankLayerVisible && (pz === 'all' || m._pzKey === pz);
+    if (show) { if (!mapObj.hasLayer(m)) mapObj.addLayer(m); }
+    else { if (mapObj.hasLayer(m)) mapObj.removeLayer(m); }
+  });
+  allCircles.forEach(c => {
+    const show = tankLayerVisible && (pz === 'all' || c._pzKey === pz);
+    if (show) { if (!mapObj.hasLayer(c)) mapObj.addLayer(c); }
+    else { if (mapObj.hasLayer(c)) mapObj.removeLayer(c); }
+  });
+}
+
+/* Initial render */
+renderPZSummary();
+renderTankList('all');
+buildPipeLayers(map);
+
+
+/* Style active "All" pill */
+document.querySelector('[data-pz="all"]').style.background = 'rgba(255,255,255,0.15)';
+document.querySelector('[data-pz="all"]').style.color = '#e8eef8';
+
+/* Apply colours to PZ filter pills */
+Object.entries(PZ).forEach(([key, cfg]) => {
+  const pill = document.querySelector(`[data-pz="${key}"]`);
+  if (pill) { pill.style.borderColor = cfg.color + '60'; }
+});
+</script>
+</body>
+</html>
