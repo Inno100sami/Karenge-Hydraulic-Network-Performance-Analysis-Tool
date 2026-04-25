@@ -1,6 +1,6 @@
 # 💧 Karenge Water Supply Network – Hydraulic Model Dashboard
 
-📊 https://inno100sami.github.io/Karenge-Hydraulic-Network-Performance-Analysis-Tool/karenge-dashboard.html
+📊 [Click here to view the dashoboard.](https://inno100sami.github.io/Karenge-Hydraulic-Network-Performance-Analysis-Tool/karenge-dashboard.html)
 ---
 
 ## 📖 About This Project
